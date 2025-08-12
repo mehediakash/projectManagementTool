@@ -1,21 +1,34 @@
-import React from 'react';
-import { Bar } from '@ant-design/plots';
+import React, { useEffect, useRef, useState } from "react";
+import Gantt from "frappe-gantt";
+import axios from "axios";
 
-const data = [
-  { task: 'Task 1', start: '2025-08-10', end: '2025-08-13' },
-  { task: 'Task 2', start: '2025-08-11', end: '2025-08-14' },
-];
+export default function GanttChart() {
+  const ganttRef = useRef(null);
+  const [tasks, setTasks] = useState([]);
 
-export default function GanttLikeChart() {
-  const config = {
-    data: data.map(d => ({
-      task: d.task,
-      duration: [new Date(d.start).getTime(), new Date(d.end).getTime()]
-    })),
-    xField: 'duration',
-    yField: 'task',
-    isRange: true,
-  };
+  useEffect(() => {
+    axios.get("/api/tasks")
+      .then((res) => {
+        const formatted = res.data.map((task) => ({
+          id: task._id,
+          name: task.title,
+          start: task.startDate,
+          end: task.endDate,
+          progress: task.progress || 0,
+        }));
+        setTasks(formatted);
+      })
+      .catch(() => console.error("Failed to load Gantt tasks"));
+  }, []);
 
-  return <Bar {...config} />;
+  useEffect(() => {
+    if (tasks.length > 0 && ganttRef.current) {
+      new Gantt(ganttRef.current, tasks, {
+        view_mode: "Day",
+        date_format: "YYYY-MM-DD",
+      });
+    }
+  }, [tasks]);
+
+  return <div ref={ganttRef}></div>;
 }
