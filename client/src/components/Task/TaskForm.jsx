@@ -1,104 +1,106 @@
-import React, { useEffect } from "react";
-import { Modal, Form, Input, DatePicker, Select, InputNumber, message } from "antd";
-import axiosClient from "../../api/axiosClient";
-import moment from "moment";
-import { useDispatch } from "react-redux";
+import { useEffect } from "react";
+import { Button, DatePicker, Form, Input, Modal, Select, Radio } from "antd";
+import dayjs from "dayjs";
+import { useDispatch, useSelector } from "react-redux";
 import { createTask, updateTask } from "../../features/taskSlice";
+import { fetchProjects } from "../../features/projectSlice";
+import { fetchUsers } from "../../features/userSlice";
 
-const { TextArea } = Input;
-
-export default function TaskForm({ visible, onClose, editTask }) {
-  const [form] = Form.useForm();
+export default function TaskForm({ open, onClose, initial }) {
   const dispatch = useDispatch();
-  const [projects, setProjects] = React.useState([]);
-  const [users, setUsers] = React.useState([]);
-  const loadingRef = React.useRef(false);
+  const { user } = useSelector(state => state.auth);
+  const { list: projects } = useSelector((s)=>s.projects);
+  const { list: users } = useSelector((s)=>s.users);
+  const { list: tasks } = useSelector((s)=>s.tasks);
+  const [form] = Form.useForm();
 
-  useEffect(() => {
-    
-    axiosClient.get("/projects").then(res => {
-    
-      setProjects(Array.isArray(res) ? res : (res.rows || []));
-    }).catch(() => setProjects([]));
+  const isMemberEditingAssignedTask = user.role === 'member' && initial && initial.createdBy?._id !== user._id && initial.assignees?.some(a => a._id === user._id);
 
-    axiosClient.get("/users").then(res => {
-      setUsers(Array.isArray(res) ? res : (res.rows || []));
-    }).catch(() => setUsers([]));
-  }, []);
+  useEffect(()=>{ 
+    dispatch(fetchProjects());
+    dispatch(fetchUsers());
+  },[dispatch]);
 
-  useEffect(() => {
-    if (editTask) {
+  useEffect(()=>{
+    if (initial) {
       form.setFieldsValue({
-        title: editTask.title,
-        description: editTask.description,
-        project: editTask.project?._id || editTask.project,
-        priority: editTask.priority || 3,
-        dueDate: editTask.dueDate ? moment(editTask.dueDate) : null,
-        assignees: (editTask.assignees || []).map(a => (a._id ? a._id : a))
+        title: initial.title,
+        description: initial.description,
+        project: initial.project?._id || initial.project,
+        assignees: (initial.assignees||[]).map(a => a._id || a),
+        priority: initial.priority || 3,
+        status: initial.status || "todo",
+        dueDate: initial.dueDate ? dayjs(initial.dueDate) : null,
+        dependencies: (initial.dependencies||[]).map(d => d.task?._id || d.task),
       });
     } else {
       form.resetFields();
     }
-  }, [editTask, form]);
+  },[initial, form]);
 
-  const onFinish = async (vals) => {
-    try {
-      loadingRef.current = true;
-      const payload = {
-        title: vals.title,
-        description: vals.description,
-        project: vals.project,
-        priority: vals.priority,
-        dueDate: vals.dueDate ? vals.dueDate.toDate() : null,
-        assignees: vals.assignees || []
-      };
-
-      if (editTask) {
-        await dispatch(updateTask({ id: editTask._id, data: payload })).unwrap();
-        message.success("Task updated");
-      } else {
-        await dispatch(createTask(payload)).unwrap();
-        message.success("Task created");
-      }
-      onClose();
-    } catch (err) {
-      message.error(err.message || "Operation failed");
-    } finally {
-      loadingRef.current = false;
+  const onFinish = (values) => {
+    const payload = {
+      ...values,
+      dueDate: values.dueDate ? values.dueDate.toISOString() : null
+    };
+    if (initial?._id) {
+      dispatch(updateTask({ id: initial._id, data: payload }));
+    } else {
+      dispatch(createTask(payload));
     }
+    onClose();
   };
 
   return (
-    <Modal
-      visible={visible}
-      title={editTask ? "Edit Task" : "Create Task"}
-      okText={editTask ? "Update" : "Create"}
-      onCancel={onClose}
-      onOk={() => form.submit()}
-      destroyOnClose
-    >
-      <Form form={form} layout="vertical" onFinish={onFinish}>
-        <Form.Item name="title" label="Title" rules={[{ required: true }]}>
-          <Input />
+    <Modal open={open} onCancel={onClose} title={initial? "Edit Task" : "New Task"} footer={null} destroyOnClose>
+      <Form layout="vertical" form={form} onFinish={onFinish}>
+        <Form.Item name="title" label="Title" rules={[{ required: true, message: "Title required" }]}>
+          <Input placeholder="Task title" disabled={isMemberEditingAssignedTask} />
         </Form.Item>
         <Form.Item name="description" label="Description">
-          <TextArea rows={4} />
+          <Input.TextArea rows={3} placeholder="Details" disabled={isMemberEditingAssignedTask} />
         </Form.Item>
-        <Form.Item name="project" label="Project">
-          <Select showSearch optionFilterProp="children" allowClear>
-            {projects.map(p => <Select.Option key={p._id} value={p._id}>{p.name}</Select.Option>)}
-          </Select>
+        <Form.Item name="project" label="Project" rules={[{ required: true }]}>
+          <Select placeholder="Select project" options={projects.map(p=>({label:p.name, value:p._id}))} disabled={isMemberEditingAssignedTask} />
         </Form.Item>
         <Form.Item name="assignees" label="Assignees">
-          <Select mode="multiple" allowClear>
-            {users.map(u => <Select.Option key={u._id} value={u._id}>{u.name} ({u.role})</Select.Option>)}
-          </Select>
+          <Select mode="multiple" placeholder="Select assignees"
+            options={users.map(u=>({label:`${u.name} (${u.email})`, value:u._id}))} disabled={isMemberEditingAssignedTask} />
         </Form.Item>
-        <Form.Item name="priority" label="Priority" initialValue={3}>
-          <InputNumber min={1} max={5} />
+        <Form.Item name="priority" label="Priority">
+          <Radio.Group disabled={isMemberEditingAssignedTask}>
+            <Radio value={1}>High</Radio>
+            <Radio value={2}>Med-High</Radio>
+            <Radio value={3}>Medium</Radio>
+            <Radio value={4}>Low</Radio>
+            <Radio value={5}>Lowest</Radio>
+          </Radio.Group>
         </Form.Item>
-        <Form.Item name="dueDate" label="Due date">
-          <DatePicker style={{ width: "100%" }} />
+        <Form.Item name="status" label="Status">
+          <Select
+            options={[
+              { label:"To Do", value:"todo" },
+              { label:"In Progress", value:"in_progress" },
+              { label:"Blocked", value:"blocked" },
+              { label:"Done", value:"done" },
+            ]}
+          />
+        </Form.Item>
+        <Form.Item name="dueDate" label="Due Date">
+          <DatePicker className="w-full" />
+        </Form.Item>
+        <Form.Item name="dependencies" label="Dependencies">
+          <Select
+            mode="multiple"
+            placeholder="Select tasks this one depends on"
+            options={tasks.map(t=>({label:t.title, value:t._id}))}
+            disabled={isMemberEditingAssignedTask}
+          />
+        </Form.Item>
+        <Form.Item>
+          <Button type="primary" htmlType="submit" block>
+            {initial? "Update Task" : "Create Task"}
+          </Button>
         </Form.Item>
       </Form>
     </Modal>

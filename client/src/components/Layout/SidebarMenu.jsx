@@ -1,59 +1,27 @@
-import { Menu, Spin } from "antd";
-import { DashboardOutlined, ProjectOutlined, UserOutlined, TeamOutlined } from "@ant-design/icons";
-import { Link } from "react-router-dom";
+import { Menu } from "antd";
+import { AppstoreOutlined, LoginOutlined, ProjectOutlined } from "@ant-design/icons";
+import { Link, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
-
-const menuItems = [
-  {
-    key: 'dashboard',
-    icon: <DashboardOutlined />,
-    label: 'Dashboard',
-    path: '/',
-    roles: ['admin', 'manager', 'member'],
-  },
-  {
-    key: 'projects',
-    icon: <ProjectOutlined />,
-    label: 'Projects',
-    path: '/projects',
-    roles: ['admin', 'manager', 'member'],
-  },
-  {
-    key: 'admin',
-    icon: <UserOutlined />,
-    label: 'Admin',
-    path: '/admin',
-    roles: ['admin'],
-  },
-  {
-    key: 'manager',
-    icon: <TeamOutlined />,
-    label: 'Manager',
-    path: '/manager',
-    roles: ['admin', 'manager'],
-  }
-];
+import RoleGuard from "../RoleGuard";
 
 export default function SidebarMenu() {
-  const { user, isUserLoading } = useSelector(state => state.auth);
-
-  if (isUserLoading) {
-    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin /></div>;
-  }
-
-  const filteredMenuItems = menuItems.filter(item => {
-    if (!item.roles) return true; // public routes
-    if (!user) return false;
-    return item.roles.includes(user.role);
-  });
-
+  const { pathname } = useLocation();
+  const { token } = useSelector((s)=>s.auth);
   return (
-    <Menu theme="dark" mode="inline">
-      {filteredMenuItems.map(item => (
-        <Menu.Item key={item.key} icon={item.icon}>
-          <Link to={item.path}>{item.label}</Link>
+    <Menu theme="dark" mode="inline" selectedKeys={[pathname]}>
+      <Menu.Item key="/" icon={<AppstoreOutlined />}>
+        <Link to="/">Dashboard</Link>
+      </Menu.Item>
+      <RoleGuard allow={["admin", "manager"]}>
+        <Menu.Item key="/projects" icon={<ProjectOutlined />}>
+          <Link to="/projects">Projects</Link>
         </Menu.Item>
-      ))}
+      </RoleGuard>
+      {!token && (
+        <Menu.Item key="/login" icon={<LoginOutlined />}>
+          <Link to="/login">Login</Link>
+        </Menu.Item>
+      )}
     </Menu>
   );
 }

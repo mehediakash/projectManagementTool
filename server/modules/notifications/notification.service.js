@@ -1,4 +1,5 @@
 const Notification = require('./notification.model');
+
 let io = null;
 
 function setSocket(_io) { io = _io; }

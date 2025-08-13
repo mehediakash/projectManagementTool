@@ -1,151 +1,87 @@
-import React, { useEffect } from "react";
-import { Table, Button, Space, Popconfirm, Tag, Select, message, Badge } from "antd";
+import { useMemo, useState } from "react";
+import { Table, Space, Button, Tag, Popconfirm, Drawer } from "antd";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchTasks, deleteTask, assignTask } from "../../features/taskSlice";
+import { deleteTask, assignTask } from "../../features/taskSlice";
 import TaskForm from "./TaskForm";
-import axiosClient from "../../api/axiosClient";
-import io from "socket.io-client";
+import PresenceAvatars from "../Presence/PresenceAvatars";
+import usePresence from "../Presence/usePresence";
+import { UserAddOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 
-export default function TaskList() {
+export default function TaskList({ tasks }) {
   const dispatch = useDispatch();
-  const { list, loading } = useSelector(s => s.tasks);
-  const user = useSelector(s => s.auth.user);
-  const [modalVisible, setModalVisible] = React.useState(false);
-  const [editTask, setEditTask] = React.useState(null);
-  const [users, setUsers] = React.useState([]);
-  const [presence, setPresence] = React.useState({});
+  const { user } = useSelector(state => state.auth);
+  const [editing, setEditing] = useState(null);
+  const [openDrawer, setOpenDrawer] = useState(false);
+  const [selected, setSelected] = useState(null);
 
-  useEffect(() => {
-    dispatch(fetchTasks());
-    
-    axiosClient.get("/users").then(res => setUsers(Array.isArray(res) ? res : (res.rows || []))).catch(() => setUsers([]));
-
-
-    const token = localStorage.getItem("token");
-  
-    const socket = io("http://localhost:4000", { query: { userId: user?._id || "" }, transports: ["websocket"] });
-
-    socket.on("connect", () => {
-      console.log("socket connected", socket.id);
-    });
-
-    socket.on("notification", (notif) => {
-      message.info(notif.payload?.title || "Notification");
-    });
-
-    socket.on("presence", (payload) => {
-     
-      setPresence(prev => ({ ...prev, [payload.taskId]: payload.count }));
-    });
-
-    return () => { socket.disconnect(); };
-  }, [dispatch, user]);
-
-  const onDelete = async (id) => {
-    try {
-      await dispatch(deleteTask(id)).unwrap();
-      message.success("Deleted");
-    } catch (err) {
-      message.error(err.message || "Delete failed");
+  const canEdit = (task) => {
+    if (!user) return false;
+    if (user.role === 'admin' || user.role === 'manager') return true;
+    if (user.role === 'member') {
+      return task.createdBy?._id === user._id || task.assignees?.some(a => a._id === user._id);
     }
+    return false;
   };
 
-  const onEdit = (task) => {
-    setEditTask(task);
-    setModalVisible(true);
-  };
-
-  const onAssign = async (taskId, assigneeId) => {
-    try {
-      await dispatch(assignTask({ id: taskId, assigneeId })).unwrap();
-      message.success("Assigned");
-    } catch (err) {
-      message.error(err.message || "Assign failed");
+  const canDelete = (task) => {
+    if (!user) return false;
+    if (user.role === 'admin' || user.role === 'manager') return true;
+    if (user.role === 'member') {
+      return task.createdBy?._id === user._id;
     }
+    return false;
   };
 
-  const columns = [
-    {
-      title: "Title",
-      dataIndex: "title",
-      key: "title",
-      render: (text, record) => (
-        <div>
-          <div>{text}</div>
-          <div style={{ marginTop: 6 }}>
-            {record.priority && <Tag color="magenta">P{record.priority}</Tag>}
-            {record.status && <Tag>{record.status}</Tag>}
-            {presence[record._id] ? <Badge count={presence[record._id]} style={{ backgroundColor: '#52c41a' }} /> : null}
-          </div>
-        </div>
+  const columns = useMemo(()=>[
+    { title: "Title", dataIndex: "title", key: "title",
+      render: (text, record)=>(
+        <a onClick={()=>{setSelected(record); setOpenDrawer(true);}}>{text}</a>
       )
     },
-    {
-      title: "Project",
-      dataIndex: "project",
-      key: "project",
-      render: (p) => p?.name || "-"
-    },
-    {
-      title: "Assignees",
-      dataIndex: "assignees",
-      key: "assignees",
-      render: (arr) => (arr && arr.length ? arr.map(a => <Tag key={typeof a === "string" ? a : a._id}>{a.name || a}</Tag>) : "-")
-    },
-    {
-      title: "Due",
-      dataIndex: "dueDate",
-      key: "dueDate",
-      render: (d) => d ? new Date(d).toLocaleDateString() : "-"
-    },
-    {
-      title: "Actions",
-      key: "actions",
-      render: (_, rec) => {
-        const allowedEdit = ["admin", "manager", "member"].includes(user?.role);
-        const allowedDelete = ["admin", "manager"].includes(user?.role);
-        return (
-          <Space>
-            {allowedEdit && <Button size="small" onClick={() => onEdit(rec)}>Edit</Button>}
-            {allowedDelete && (
-              <Popconfirm title="Delete?" onConfirm={() => onDelete(rec._id)}>
-                <Button size="small" danger>Delete</Button>
-              </Popconfirm>
-            )}
-            {["admin", "manager"].includes(user?.role) && (
-              <Select
-                placeholder="Assign"
-                style={{ width: 150 }}
-                onSelect={(val) => onAssign(rec._id, val)}
-                value={undefined}
-                size="small"
-              >
-                {users.map(u => <Select.Option key={u._id} value={u._id}>{u.name} ({u.role})</Select.Option>)}
-              </Select>
-            )}
-          </Space>
-        );
-      }
+    { title: "Project", dataIndex: ["project","name"], key: "project",
+      render: (_,r)=> r.project?.name || "—" },
+    { title: "Priority", dataIndex: "priority", key: "priority",
+      render: (p)=> <Tag color={p<=2?"red":p===3?"gold":"blue"}>P{p}</Tag> },
+    { title: "Status", dataIndex: "status", key: "status",
+      render: (s)=> <Tag color={s==="done"?"green":s==="blocked"?"volcano":s==="in_progress"?"geekblue":"default"}>{s}</Tag> },
+    { title: "Assignees", key:"assignees",
+      render: (_,r)=> (r.assignees||[]).map(a=>a.name || a.email).join(", ") || "—" },
+    { title: "Actions", key:"actions",
+      render: (_,r)=>(
+        <Space>
+         
+          {canEdit(r) && <Button icon={<EditOutlined />} onClick={()=>setEditing(r)} />}
+          {canDelete(r) && 
+            <Popconfirm title="Delete task?" onConfirm={()=>dispatch(deleteTask(r._id))}>
+              <Button danger icon={<DeleteOutlined />} />
+            </Popconfirm>
+          }
+        </Space>
+      )
     }
-  ];
+  ],[dispatch, user]);
+
+  // presence per selected task drawer
+  const { online } = usePresence({ room: selected ? `task:${selected._id}` : "dashboard" });
 
   return (
-    <div>
-      <div style={{ marginBottom: 12 }}>
-        <Button type="primary" onClick={() => { setEditTask(null); setModalVisible(true); }}>Create Task</Button>
-      </div>
+    <>
+      <Table rowKey="_id" columns={columns} dataSource={tasks} pagination={{ pageSize: 10 }} />
 
-      <Table
-        columns={columns}
-        dataSource={list}
-        rowKey={(r) => r._id}
-        loading={loading}
-        pagination={{ pageSize: 10 }}
-      />
+      {/* Edit/Create */}
+      <TaskForm open={!!editing} onClose={()=>setEditing(null)} initial={editing} />
 
-      {modalVisible && (
-        <TaskForm visible={modalVisible} onClose={() => setModalVisible(false)} editTask={editTask} />
-      )}
-    </div>
+      {/* Details drawer */}
+      <Drawer width={420} title={selected?.title} open={openDrawer} onClose={()=>setOpenDrawer(false)}>
+        <p><b>Project:</b> {selected?.project?.name || "—"}</p>
+        <p><b>Status:</b> {selected?.status}</p>
+        <p><b>Priority:</b> P{selected?.priority}</p>
+        <p><b>Assignees:</b> {(selected?.assignees||[]).map(a=>a.name || a.email).join(", ") || "—"}</p>
+        <p><b>Due:</b> {selected?.dueDate ? new Date(selected.dueDate).toLocaleDateString() : "—"}</p>
+        <div style={{ marginTop: 16 }}>
+          <b>Viewing now:</b> <PresenceAvatars users={online} />
+        </div>
+      </Drawer>
+    </>
   );
 }

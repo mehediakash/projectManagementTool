@@ -1,5 +1,5 @@
 const UserService = require('./user.service');
-
+const { getUserPresence } = require("../notifications/presence.service");
 exports.createUser = async (req, res, next) => {
   try {
     const created = await UserService.create(req.body);
@@ -52,4 +52,9 @@ exports.getMe = async (req, res, next) => {
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json(user);
   } catch (err) { next(err); }
+};
+
+exports.getPresence = async (req, res) => {
+  const status = await getUserPresence(req.params.userId);
+  res.json({ userId: req.params.userId, status });
 };

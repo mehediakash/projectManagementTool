@@ -1,123 +1,175 @@
-
-import { Form, Input, Button, Select, Typography, message } from 'antd';
-import { UserOutlined, MailOutlined, LockOutlined, ToolOutlined, TeamOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import React, { useState } from 'react';
+import axiosClient from '../api/axiosClient';
 import { useNavigate } from 'react-router-dom';
-import authApi from '../api/authApi';
-import { useState } from 'react';
+import { 
+  Form, 
+  Input, 
+  Button, 
+  Select, 
+  Slider, 
+  Card, 
+  Typography, 
+  Alert, 
+  Spin,
+  Divider 
+} from 'antd';
+import { UserOutlined, MailOutlined, LockOutlined } from '@ant-design/icons';
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 const { Option } = Select;
 
-const Signup = () => {
+export default function Signup() {
+  const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   const onFinish = async (values) => {
     setLoading(true);
+    setError(null);
     try {
-      await authApi.signup(values);
-      message.success('Signup successful! Please login.');
+      const payload = {
+        ...values,
+        skills: values.skills ? values.skills.split(',').map(skill => skill.trim()) : [],
+      };
+      await axiosClient.post('/auth/signup', payload);
       navigate('/login');
-    } catch (error) {
-      message.error(error.message);
+    } catch (err) {
+      setError(err.response?.data?.message || 'An error occurred during signup');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-      <div style={{ width: '100%', maxWidth: '400px', padding: '20px', border: '1px solid #d9d9d9', borderRadius: '2px' }}>
-        <Title level={2} style={{ textAlign: 'center' }}>Sign Up</Title>
+    <div className="flex justify-center items-center min-h-screen bg-gray-50">
+      <Card className="w-full max-w-md shadow-lg">
+        <div className="text-center mb-6">
+          <Title level={3}>Create Your Account</Title>
+          <Text type="secondary">Join our community today</Text>
+        </div>
+
+        <Divider />
+
         <Form
-          name="signup"
+          form={form}
+          layout="vertical"
           onFinish={onFinish}
-          scrollToFirstError
+          initialValues={{
+            role: 'member',
+            availability: 1
+          }}
         >
+          {error && (
+            <Alert
+              message={error}
+              type="error"
+              showIcon
+              closable
+              className="mb-4"
+            />
+          )}
+
           <Form.Item
             name="name"
-            rules={[{ required: true, message: 'Please input your Name!', whitespace: true }]}
+            label="Full Name"
+            rules={[{ required: true, message: 'Please input your name!' }]}
           >
-            <Input prefix={<UserOutlined />} placeholder="Name" />
+            <Input 
+              prefix={<UserOutlined />} 
+              placeholder="John Doe" 
+              size="large"
+            />
           </Form.Item>
 
           <Form.Item
             name="email"
+            label="Email"
             rules={[
-              { type: 'email', message: 'The input is not valid E-mail!' },
-              { required: true, message: 'Please input your E-mail!' },
+              { required: true, message: 'Please input your email!' },
+              { type: 'email', message: 'Please enter a valid email!' }
             ]}
           >
-            <Input prefix={<MailOutlined />} placeholder="E-mail" />
+            <Input 
+              prefix={<MailOutlined />} 
+              placeholder="john@example.com" 
+              size="large"
+            />
           </Form.Item>
 
           <Form.Item
             name="password"
+            label="Password"
             rules={[{ required: true, message: 'Please input your password!' }]}
-            hasFeedback
           >
-            <Input.Password prefix={<LockOutlined />} placeholder="Password" />
-          </Form.Item>
-
-          {/* <Form.Item
-            name="confirm"
-            dependencies={['password']}
-            hasFeedback
-            rules={[
-              { required: true, message: 'Please confirm your password!' },
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  if (!value || getFieldValue('password') === value) {
-                    return Promise.resolve();
-                  }
-                  return Promise.reject(new Error('The two passwords that you entered do not match!'));
-                },
-              }),
-            ]}
-          >
-            <Input.Password prefix={<LockOutlined />} placeholder="Confirm Password" />
-          </Form.Item> */}
-
-          <Form.Item
-            name="skills"
-            rules={[{ required: true, message: 'Please input your skills!' }]}
-          >
-            <Select mode="tags" style={{ width: '100%' }} placeholder="Skills" prefix={<ToolOutlined />}>
-              {/* The user can add their own skills */}
-            </Select>
+            <Input.Password 
+              prefix={<LockOutlined />} 
+              placeholder="••••••••" 
+              size="large"
+            />
           </Form.Item>
 
           <Form.Item
             name="role"
-            rules={[{ required: true, message: 'Please select a role!' }]}
+            label="Role"
           >
-            <Select placeholder="Select a role" prefix={<TeamOutlined />}>
-              <Option value="admin">Admin</Option>
-              <Option value="manager">Project Manager</Option>
+            <Select size="large">
               <Option value="member">Member</Option>
-              <Option value="viewer">viewer</Option>
+              <Option value="manager">Manager</Option>
+              <Option value="admin">Admin</Option>
+              <Option value="viewer">Viewer</Option>
             </Select>
           </Form.Item>
-          
-          {/* <Form.Item
-            name="availability"
-            rules={[{ required: true, message: 'Please select your availability!' }]}
+
+          <Form.Item
+            name="skills"
+            label="Skills"
+            tooltip="Separate multiple skills with commas"
           >
-            <Select placeholder="Select availability" prefix={<CheckCircleOutlined />}>
-              <Option value="available">Available</Option>
-              <Option value="unavailable">Unavailable</Option>
-            </Select>
-          </Form.Item> */}
+            <Input 
+              placeholder="e.g. JavaScript, React, Node.js" 
+              size="large"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="availability"
+            label={`Availability: ${form.getFieldValue('availability') || 1} hours/day`}
+          >
+            <Slider 
+              min={0} 
+              max={8} 
+              marks={{
+                0: '0h',
+                4: '4h',
+                8: '8h'
+              }}
+              tooltip={{ formatter: value => `${value}h/day` }}
+            />
+          </Form.Item>
 
           <Form.Item>
-            <Button type="primary" htmlType="submit" style={{ width: '100%' }} loading={loading}>
-              Sign Up
+            <Button 
+              type="primary" 
+              htmlType="submit" 
+              block 
+              size="large"
+              loading={loading}
+            >
+              {loading ? 'Creating Account...' : 'Sign Up'}
             </Button>
           </Form.Item>
         </Form>
-      </div>
+
+        <div className="text-center mt-4">
+          <Text>
+            Already have an account?{' '}
+            <Button type="link" onClick={() => navigate('/login')} className="p-0">
+              Log in
+            </Button>
+          </Text>
+        </div>
+      </Card>
     </div>
   );
-};
-
-export default Signup;
+}

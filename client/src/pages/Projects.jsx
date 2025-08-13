@@ -1,41 +1,27 @@
 import { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { Button, Typography, Spin, Alert, Row, Col, message } from 'antd';
-import projectApi from '../api/projectApi';
+import { fetchProjects, createProject } from '../features/projectSlice';
 import ProjectCard from '../components/ProjectCard';
 import CreateProjectModal from '../components/CreateProjectModal';
 
 const { Title } = Typography;
 
 const Projects = () => {
-  const [projects, setProjects] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [isModalVisible, setIsModalVisible] = useState(false);
+  const dispatch = useDispatch();
+  const { list: projects, loading, error } = useSelector(state => state.projects);
   const user = useSelector(state => state.auth.user);
-
-  const fetchProjects = async () => {
-    setLoading(true);
-    try {
-      const response = await projectApi.listProjects();
-      setProjects(response.rows);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [isModalVisible, setIsModalVisible] = useState(false);
 
   useEffect(() => {
-    fetchProjects();
-  }, []);
+    dispatch(fetchProjects());
+  }, [dispatch]);
 
   const handleCreateProject = async (values) => {
     try {
-      await projectApi.createProject(values);
+      await dispatch(createProject(values)).unwrap();
       message.success('Project created successfully!');
       setIsModalVisible(false);
-      fetchProjects(); // Refresh the projects list
     } catch (error) {
       message.error(error.message);
     }

@@ -7,7 +7,7 @@ const PriorityQueue = require('../../utils/priorityQueue');
 const taskQueue = new PriorityQueue((a,b) => a.priority - b.priority); 
 
 async function create(payload, actor) {
-  const task = await Task.create(payload);
+  const task = await Task.create({ ...payload, createdBy: actor._id });
 
   taskQueue.enqueue(task);
 
@@ -24,7 +24,7 @@ async function create(payload, actor) {
 }
 
 async function getById(id) {
-  const task = await Task.findById(id).populate('assignees project');
+  const task = await Task.findById(id).populate('assignees project createdBy');
   return task;
 }
 
@@ -41,11 +41,24 @@ async function remove(id) {
   await Task.findByIdAndDelete(id);
 }
 
-async function list(query) {
-
+async function list(query, actor) {
   const q = {};
   if (query.project) q.project = query.project;
-  return Task.find(q).limit(50).sort({ createdAt: -1 });
+
+  if (actor.role === 'member') {
+    q.$or = [
+      { assignees: actor._id },
+      { createdBy: actor._id }
+    ];
+  }
+
+  return Task.find(q).populate('assignees project createdBy').limit(50).sort({ createdAt: -1 });
+}
+
+async function listAll(query) {
+  const q = {};
+  if (query.project) q.project = query.project;
+  return Task.find(q).populate('assignees project createdBy').limit(50).sort({ createdAt: -1 });
 }
 
 async function assign(id, assigneeId, actor) {
@@ -57,4 +70,4 @@ async function assign(id, assigneeId, actor) {
   return task;
 }
 
-module.exports = { create, getById, update, remove, list, assign };
+module.exports = { create, getById, update, remove, list, listAll, assign };

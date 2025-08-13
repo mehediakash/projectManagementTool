@@ -30,7 +30,14 @@ exports.deleteTask = async (req, res, next) => {
 
 exports.listTasks = async (req, res, next) => {
   try {
-    const tasks = await TaskService.list(req.query);
+    const tasks = await TaskService.list(req.query, req.user);
+    res.json(tasks);
+  } catch (err) { next(err); }
+};
+
+exports.listAllTasks = async (req, res, next) => {
+  try {
+    const tasks = await TaskService.listAll(req.query);
     res.json(tasks);
   } catch (err) { next(err); }
 };

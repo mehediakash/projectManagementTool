@@ -1,35 +1,41 @@
-import React from "react";
+import { Button, Card, Form, Input, Typography, message } from "antd";
 import { useDispatch, useSelector } from "react-redux";
-import { loginUser } from "../features/authSlice";
-import { Form, Input, Button, Card, Alert } from "antd";
+import { signin } from "../features/authSlice";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+
+const { Title } = Typography;
 
 export default function Login() {
   const dispatch = useDispatch();
+  const { token, loading } = useSelector((s)=>s.auth);
   const navigate = useNavigate();
-  const { loading, error } = useSelector(s => s.auth);
 
   const onFinish = async (values) => {
-    const result = await dispatch(loginUser(values));
-    if (result.meta.requestStatus === "fulfilled") {
-      navigate("/");
+    try {
+      await dispatch(signin(values)).unwrap();
+      message.success("Welcome!");
+    } catch (e) {
+      message.error(e?.message || "Login failed");
     }
   };
 
+  useEffect(()=>{
+    if (token) navigate("/");
+  },[token, navigate]);
+
   return (
-    <div style={{ display: "flex", minHeight: "80vh", alignItems: "center", justifyContent: "center" }}>
-      <Card title="Sign in" style={{ width: 380 }}>
-        {error && <Alert message={error} type="error" showIcon style={{ marginBottom: 12 }} />}
+    <div style={{ minHeight: "60vh", display: "grid", placeItems: "center" }}>
+      <Card style={{ width: 360 }}>
+        <Title level={4}>Sign in</Title>
         <Form layout="vertical" onFinish={onFinish}>
-          <Form.Item label="Email" name="email" rules={[{ required: true, message: "Please enter email" }]}>
-            <Input />
+          <Form.Item name="email" label="Email" rules={[{ required: true, type: "email" }]}>
+            <Input placeholder="you@example.com" />
           </Form.Item>
-          <Form.Item label="Password" name="password" rules={[{ required: true, message: "Please enter password" }]}>
+          <Form.Item name="password" label="Password" rules={[{ required: true }]}>
             <Input.Password />
           </Form.Item>
-          <Form.Item>
-            <Button type="primary" htmlType="submit" block loading={loading}>Sign in</Button>
-          </Form.Item>
+          <Button loading={loading} type="primary" htmlType="submit" block>Sign In</Button>
         </Form>
       </Card>
     </div>

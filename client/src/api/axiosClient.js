@@ -1,10 +1,11 @@
 import axios from "axios";
 
+const baseURL = "http://localhost:4000/api/v1";
+
 const axiosClient = axios.create({
-  baseURL: "http://localhost:4000/api/v1", 
+  baseURL,
   headers: { "Content-Type": "application/json" },
 });
-
 
 axiosClient.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
@@ -13,11 +14,13 @@ axiosClient.interceptors.request.use((config) => {
 });
 
 axiosClient.interceptors.response.use(
-  (response) => response.data,
-  (error) => {
-    
-    const message = error?.response?.data?.message || error.message || "Unknown error";
-    return Promise.reject(new Error(message));
+  (res) => res.data,
+  (err) => {
+    if (err?.response?.status === 401) {
+      localStorage.removeItem("token");
+      window.location.href = "/login";
+    }
+    return Promise.reject(err);
   }
 );
 
