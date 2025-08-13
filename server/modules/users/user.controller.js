@@ -45,3 +45,11 @@ exports.listUsers = async (req, res, next) => {
     res.json(users);
   } catch (err) { next(err); }
 };
+
+exports.getMe = async (req, res, next) => {
+  try {
+    const user = await UserService.getById(req.user._id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json(user);
+  } catch (err) { next(err); }
+};

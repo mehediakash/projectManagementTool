@@ -24,6 +24,9 @@ const updateUserSchema = Joi.object({
 
 router.post('/', jwt, rbac(['admin','manager']), validate(createUserSchema), UserController.createUser);
 
+router.get('/me', jwt, UserController.getMe);
+
+
 
 router.get('/:id', jwt, UserController.getUser);
 

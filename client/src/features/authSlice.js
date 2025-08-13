@@ -12,10 +12,20 @@ export const loginUser = createAsyncThunk("auth/loginUser", async (credentials, 
   }
 });
 
+export const fetchUser = createAsyncThunk("auth/fetchUser", async (_, { rejectWithValue }) => {
+  try {
+    const res = await axiosClient.get("/users/me");
+    return res;
+  } catch (err) {
+    return rejectWithValue(err.message);
+  }
+});
+
 const initialState = {
-  user: null,
+  user: JSON.parse(localStorage.getItem("user")) || null,
   token: localStorage.getItem("token") || null,
   loading: false,
+  isUserLoading: false,
   error: null
 };
 
@@ -27,6 +37,7 @@ const authSlice = createSlice({
       state.user = null;
       state.token = null;
       localStorage.removeItem("token");
+      localStorage.removeItem("user");
     },
     setUser(state, action) {
       state.user = action.payload;
@@ -40,10 +51,26 @@ const authSlice = createSlice({
         state.token = payload.token;
         state.user = payload.user;
         localStorage.setItem("token", payload.token);
+        localStorage.setItem("user", JSON.stringify(payload.user));
       })
       .addCase(loginUser.rejected, (state, { payload }) => {
         state.loading = false;
         state.error = payload || "Login failed";
+      })
+      .addCase(fetchUser.pending, (state) => {
+        state.isUserLoading = true;
+      })
+      .addCase(fetchUser.fulfilled, (state, { payload }) => {
+        state.user = payload;
+        localStorage.setItem("user", JSON.stringify(payload));
+        state.isUserLoading = false;
+      })
+      .addCase(fetchUser.rejected, (state) => {
+        state.user = null;
+        state.token = null;
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        state.isUserLoading = false;
       });
   }
 });
