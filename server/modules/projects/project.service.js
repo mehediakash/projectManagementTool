@@ -3,9 +3,10 @@ const Project = require('./project.model');
 const SearchIndexer = require('../../integrations/search.indexer');
 
 async function create(payload) {
-  const project = await Project.create(payload);
+  let project = await Project.create(payload);
 
   try { await SearchIndexer.indexProject(project); } catch (e) { console.warn('ES index project error', e.message); }
+  project = await project.populate('owner members', '-password');
   return project;
 }
 
@@ -15,7 +16,7 @@ async function getById(id) {
 }
 
 async function update(id, payload) {
-  const project = await Project.findByIdAndUpdate(id, payload, { new: true });
+  const project = await Project.findByIdAndUpdate(id, payload, { new: true }).populate('owner members', '-password');
   try { await SearchIndexer.indexProject(project); } catch (e) { console.warn('ES update project error', e.message); }
   return project;
 }

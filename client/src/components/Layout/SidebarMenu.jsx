@@ -9,9 +9,11 @@ export default function SidebarMenu() {
   const { token } = useSelector((s)=>s.auth);
   return (
     <Menu theme="dark" mode="inline" selectedKeys={[pathname]}>
-      <Menu.Item key="/" icon={<AppstoreOutlined />}>
-        <Link to="/">Dashboard</Link>
-      </Menu.Item>
+      {token && (
+        <Menu.Item key="/" icon={<AppstoreOutlined />}>
+          <Link to="/">Dashboard</Link>
+        </Menu.Item>
+      )}
       <RoleGuard allow={["admin", "manager"]}>
         <Menu.Item key="/projects" icon={<ProjectOutlined />}>
           <Link to="/projects">Projects</Link>

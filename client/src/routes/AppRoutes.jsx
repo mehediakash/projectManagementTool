@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import AppLayout from "../components/Layout/AppLayout";
 import RoleGuard from "../components/RoleGuard";
+import ProtectedRoute from "../components/ProtectedRoute";
 
 const Dashboard = lazy(()=>import("../pages/Dashboard"));
 const Login = lazy(()=>import("../pages/Login"));
@@ -14,15 +15,17 @@ const router = createBrowserRouter([
     path: "/",
     element: <AppLayout />,
     children: [
-      { index: true, element: <Dashboard /> },
+      { index: true, element: <ProtectedRoute><Dashboard /></ProtectedRoute> },
       { path: "login", element: <Login /> },
       { path: "signup", element: <Signup /> },
       { 
         path: "projects", 
         element: (
-          <RoleGuard allow={["admin", "manager"]}>
-            <Projects />
-          </RoleGuard>
+          <ProtectedRoute>
+            <RoleGuard allow={["admin", "manager"]}>
+              <Projects />
+            </RoleGuard>
+          </ProtectedRoute>
         )
       },
       { path: "*", element: <NotFound /> },

@@ -4,7 +4,8 @@ import { signin } from "../features/authSlice";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-const { Title } = Typography;
+
+const { Title, Text } = Typography;
 
 export default function Login() {
   const dispatch = useDispatch();
@@ -37,6 +38,14 @@ export default function Login() {
           </Form.Item>
           <Button loading={loading} type="primary" htmlType="submit" block>Sign In</Button>
         </Form>
+        <div className="text-center mt-4">
+                  <Text>
+                    Already have no an account?{' '}
+                    <Button type="link" onClick={() => navigate('/signup')} className="p-0">
+                      sign up
+                    </Button>
+                  </Text>
+                </div>
       </Card>
     </div>
   );

@@ -117,7 +117,6 @@ export default function Signup() {
               <Option value="member">Member</Option>
               <Option value="manager">Manager</Option>
               <Option value="admin">Admin</Option>
-              <Option value="viewer">Viewer</Option>
             </Select>
           </Form.Item>
 
