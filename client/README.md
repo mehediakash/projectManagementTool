@@ -1,12 +1,66 @@
-# React + Vite
+# 📌 Project Management Tool
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A collaborative project management tool to manage tasks and projects efficiently.  
+The platform supports role-based access for admins and users, with features like task tracking, progress updates, and Gantt charts.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🌐 Live Demo
 
-## Expanding the ESLint configuration
+### **Frontend Deployment**
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+🔗 [Netlify](https://projectmanagementtools.netlify.app/)
+
+### **Backend Deployment**
+
+🔗 [Render](https://projectmanagementtool-make.onrender.com/)
+
+---
+
+## 📂 GitHub Repositories
+
+- **Frontend:** [GitHub Link](https://github.com/mehediakash/projectManagementTool/tree/main/client)
+- **Backend:** [GitHub Link](https://github.com/mehediakash/projectManagementTool/tree/main/server)
+
+---
+
+## 🎥 Demonstration Video
+
+📺 [Watch Here](https://drive.google.com/file/d/1yYbwf0Exd2an716zt3g4AV0WwgRZnFBE/view?usp=sharing)
+
+---
+
+## 🔑 Test Credentials
+
+**Admin Login**  
+📧 Email: `dev.mhakash@gmail.com`  
+🔑 Password: `12345678`
+
+**User Login**  
+📧 Email: `mylogicbd3@gmail.com`  
+🔑 Password: `12345678`
+
+---
+
+## 🛠️ Tech Stack
+
+- **Frontend:** React, Vite, Tailwind CSS
+- **Backend:** Node.js, Express.js
+- **Database:** MongoDB
+- **Hosting:** Netlify / Render
+
+---
+
+## 🚀 How to Run Locally
+
+### 1️⃣ Clone the Repositories
+
+```bash
+# Clone Frontend
+git clone https://github.com/mehediakash/projectManagementTool.git
+cd projectManagementTool/client
+
+# Clone Backend
+git clone https://github.com/mehediakash/projectManagementTool.git
+cd projectManagementTool/server
+```
